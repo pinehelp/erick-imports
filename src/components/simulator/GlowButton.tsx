@@ -17,7 +17,7 @@ export const GlowButton = forwardRef<HTMLButtonElement, GlowButtonProps>(
           'relative inline-flex items-center justify-center gap-2 rounded-xl font-semibold transition-all duration-200',
           'active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background',
           // Variants
-          variant === 'primary' && 'bg-gradient-to-r from-brand-orange-strong via-brand-orange to-brand-orange-glow text-primary-foreground',
+          variant === 'primary' && 'bg-gradient-to-r from-brand-orange-strong via-brand-orange to-brand-orange-glow text-white',
           variant === 'primary' && !disabled && 'hover:brightness-110',
           variant === 'secondary' && 'bg-card border border-border text-foreground hover:border-brand-blue-glow/30 hover:bg-card/80',
           variant === 'ghost' && 'bg-transparent text-muted-foreground hover:text-foreground hover:bg-muted/30',
