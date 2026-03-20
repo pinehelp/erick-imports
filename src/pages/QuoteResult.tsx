@@ -2,7 +2,7 @@ import { useSimulator } from '@/hooks/useSimulator';
 import { TRADE_IN_MODELS, SALE_MODELS, formatCurrency, formatStorage } from '@/data/catalog';
 import { Disclaimer } from '@/components/simulator/Disclaimer';
 import { GlowButton } from '@/components/simulator/GlowButton';
-import { MessageCircle, RotateCcw, ArrowDown, ArrowUp, TrendingDown, Sparkles } from 'lucide-react';
+import { MessageCircle, RotateCcw, ArrowDown, ArrowUp, Sparkles } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 export default function QuoteResult() {
@@ -26,9 +26,9 @@ export default function QuoteResult() {
 
   const whatsappMsg = encodeURIComponent(
     `Olá! Fiz uma simulação de upgrade:\n\n` +
-    `📱 Meu aparelho: ${tradeModel.name} ${formatStorage(data.currentStorage!)} — ${formatCurrency(quote.finalTradeInValue)}\n` +
-    `✨ Desejo: ${saleModel.name} ${formatStorage(data.desiredStorage!)} (${data.desiredCondition === 'sealed' ? 'Lacrado' : 'Usado'}) — ${formatCurrency(quote.desiredPhonePrice)}\n` +
-    `💰 Diferença estimada: ${formatCurrency(quote.difference)}\n\n` +
+    `📱 Meu aparelho: ${tradeModel.name} ${formatStorage(data.currentStorage!)}\n` +
+    `✨ Desejo: ${saleModel.name} ${formatStorage(data.desiredStorage!)} (${data.desiredCondition === 'sealed' ? 'Lacrado' : 'Usado'})\n` +
+    `💰 Valor estimado do upgrade: ${formatCurrency(quote.difference)}\n\n` +
     `Nome: ${data.name}\nTelefone: ${data.phone}`
   );
 
@@ -42,7 +42,7 @@ export default function QuoteResult() {
             <span className="text-xs font-semibold text-brand-orange">Cotação estimada</span>
           </div>
           <h1 className="text-2xl font-bold text-foreground">Sua simulação está pronta!</h1>
-          <p className="mt-2 text-sm text-muted-foreground">{data.name}, confira os valores estimados abaixo</p>
+          <p className="mt-2 text-sm text-muted-foreground">{data.name}, confira o valor estimado abaixo</p>
         </div>
 
         {/* Current phone summary (no value shown) */}
@@ -53,5 +53,48 @@ export default function QuoteResult() {
           </div>
           <p className="text-xs text-muted-foreground">{tradeModel.name} · {formatStorage(data.currentStorage!)} · Bateria {data.batteryHealth}%</p>
         </div>
+
+        {/* Desired phone card */}
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-2 animate-fade-in-up stagger-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ArrowDown className="h-4 w-4 text-brand-blue-glow" />
+              <span className="text-sm font-semibold text-foreground">Aparelho desejado</span>
+            </div>
+            <span className="text-xs text-muted-foreground">{data.desiredCondition === 'sealed' ? 'Lacrado' : 'Usado'}</span>
+          </div>
+          <p className="text-xs text-muted-foreground">{saleModel.name} · {formatStorage(data.desiredStorage!)}</p>
+        </div>
+
+        {/* Upgrade difference */}
+        <div className="rounded-2xl border border-brand-orange/30 bg-brand-orange/5 p-6 text-center glow-orange-sm animate-fade-in-up stagger-3">
+          <p className="text-sm font-medium text-muted-foreground mb-1">Valor estimado do upgrade</p>
+          <p className="text-4xl font-bold text-brand-orange tabular-nums">{formatCurrency(quote.difference)}</p>
+        </div>
+
+        <Disclaimer />
+
+        {/* CTAs */}
+        <div className="space-y-3 animate-fade-in-up stagger-4">
+          <GlowButton
+            size="lg"
+            glow
+            className="w-full"
+            onClick={() => window.open(`https://wa.me/5511999999999?text=${whatsappMsg}`, '_blank')}
+          >
+            <MessageCircle className="h-5 w-5" />
+            Falar no WhatsApp
+          </GlowButton>
+          <GlowButton
+            variant="secondary"
+            className="w-full"
+            onClick={() => { resetSimulator(); navigate('/simulador'); }}
+          >
+            <RotateCcw className="h-4 w-4" />
+            Simular novamente
+          </GlowButton>
+        </div>
+      </div>
+    </div>
   );
 }
