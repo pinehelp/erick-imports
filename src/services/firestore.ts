@@ -180,7 +180,7 @@ export async function updateLeadStatusFirestore(
   await updateDoc(leadRef, { status: newStatus });
   
   // Add status change to history
-  const historyEntry: Omit<StatusChange, 'id'> = {
+  const historyEntry = {
     id: crypto.randomUUID(),
     from: oldStatus,
     to: newStatus,
