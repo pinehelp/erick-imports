@@ -29,7 +29,8 @@ export function StepContact({ data, onUpdate }: Props) {
             onChange={e => onUpdate({ name: e.target.value })}
             placeholder="Seu nome"
             maxLength={100}
-            className="w-full h-12 rounded-xl border border-border bg-card px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-brand-orange/50 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 transition-all"
+            autoComplete="name"
+            className="w-full h-12 rounded-xl border border-border bg-card px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:border-brand-orange/50 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 transition-all"
           />
         </div>
 
@@ -42,7 +43,8 @@ export function StepContact({ data, onUpdate }: Props) {
             value={data.phone}
             onChange={e => onUpdate({ phone: formatPhone(e.target.value) })}
             placeholder="(11) 99999-9999"
-            className="w-full h-12 rounded-xl border border-border bg-card px-4 text-sm text-foreground placeholder:text-muted-foreground/50 focus:border-brand-orange/50 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 transition-all"
+            autoComplete="tel"
+            className="w-full h-12 rounded-xl border border-border bg-card px-4 text-base text-foreground placeholder:text-muted-foreground/50 focus:border-brand-orange/50 focus:outline-none focus:ring-2 focus:ring-brand-orange/20 transition-all"
           />
         </div>
       </div>
