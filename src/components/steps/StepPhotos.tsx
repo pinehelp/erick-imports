@@ -1,23 +1,43 @@
 import { Camera, ImagePlus, X } from 'lucide-react';
 import { SimulatorData } from '@/types/simulator';
+import { AppSettings } from '@/types/admin';
 import { useRef } from 'react';
 
-interface Props { data: SimulatorData; onUpdate: (u: Partial<SimulatorData>) => void; }
+interface Props {
+  data: SimulatorData;
+  onUpdate: (u: Partial<SimulatorData>) => void;
+  settings?: AppSettings | null;
+}
 
-export function StepPhotos({ data, onUpdate }: Props) {
+export function StepPhotos({ data, onUpdate, settings }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const photosEnabled = settings?.photosEnabled !== false;
+  const photosLimit = settings?.photosLimit || 5;
 
   const handleFiles = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    const newUrls = Array.from(files).map(f => URL.createObjectURL(f));
+    const remaining = photosLimit - data.photos.length;
+    const newUrls = Array.from(files).slice(0, remaining).map(f => URL.createObjectURL(f));
     onUpdate({ photos: [...data.photos, ...newUrls] });
-    // TODO: Upload to Firebase Storage instead of blob URLs
   };
 
   const removePhoto = (idx: number) => {
     onUpdate({ photos: data.photos.filter((_, i) => i !== idx) });
   };
+
+  if (!photosEnabled) {
+    return (
+      <div className="space-y-4 step-enter">
+        <div>
+          <h2 className="text-xl font-bold text-foreground">Fotos do aparelho</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            O upload de fotos está desativado no momento. Prossiga para a próxima etapa.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 step-enter">
@@ -25,6 +45,7 @@ export function StepPhotos({ data, onUpdate }: Props) {
         <h2 className="text-xl font-bold text-foreground">Fotos do aparelho</h2>
         <p className="mt-1 text-sm text-muted-foreground">
           Opcional — fotos ajudam a refinar a avaliação, mas <strong className="text-foreground">não são obrigatórias</strong>
+          <span className="text-muted-foreground"> (máx. {photosLimit})</span>
         </p>
       </div>
 
@@ -44,13 +65,15 @@ export function StepPhotos({ data, onUpdate }: Props) {
         </div>
       )}
 
-      <button
-        onClick={() => inputRef.current?.click()}
-        className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-card p-8 text-muted-foreground transition-colors hover:border-brand-orange/30 hover:text-foreground active:scale-[0.98]"
-      >
-        <ImagePlus className="h-6 w-6" />
-        <span className="text-sm font-medium">Adicionar fotos</span>
-      </button>
+      {data.photos.length < photosLimit && (
+        <button
+          onClick={() => inputRef.current?.click()}
+          className="flex w-full items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-card p-8 text-muted-foreground transition-colors hover:border-brand-orange/30 hover:text-foreground active:scale-[0.98]"
+        >
+          <ImagePlus className="h-6 w-6" />
+          <span className="text-sm font-medium">Adicionar fotos</span>
+        </button>
+      )}
       <input ref={inputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFiles} />
     </div>
   );

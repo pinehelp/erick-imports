@@ -1,11 +1,15 @@
-import { TRADE_IN_MODELS, formatStorage } from '@/data/catalog';
+import { formatStorage } from '@/data/catalog';
 import { SelectionCard } from '@/components/simulator/SelectionCard';
-import { SimulatorData } from '@/types/simulator';
+import { SimulatorData, TradeInModel } from '@/types/simulator';
 
-interface Props { data: SimulatorData; onUpdate: (u: Partial<SimulatorData>) => void; }
+interface Props {
+  data: SimulatorData;
+  onUpdate: (u: Partial<SimulatorData>) => void;
+  models: TradeInModel[];
+}
 
-export function StepStorage({ data, onUpdate }: Props) {
-  const model = TRADE_IN_MODELS.find(m => m.id === data.currentModel);
+export function StepStorage({ data, onUpdate, models }: Props) {
+  const model = models.find(m => m.id === data.currentModel);
   if (!model) return null;
 
   return (

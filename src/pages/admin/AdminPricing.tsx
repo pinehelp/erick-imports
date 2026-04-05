@@ -1,8 +1,7 @@
 import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { MOCK_PRICING_RULES } from '@/data/admin-mock';
-import { PricingRule } from '@/types/admin';
-import { DollarSign, Battery, Shield, AlertTriangle, Package, CreditCard, Save } from 'lucide-react';
+import { usePricingRules } from '@/hooks/useFirebaseData';
+import { Battery, Shield, AlertTriangle, Package, CreditCard, Save, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -15,19 +14,28 @@ const CATEGORIES = [
 ] as const;
 
 export default function AdminPricing() {
-  const [rules, setRules] = useState<PricingRule[]>(MOCK_PRICING_RULES);
+  const { rules, loading, updateRule, saveAll, firebaseReady } = usePricingRules();
   const [activeCategory, setActiveCategory] = useState<string>('battery');
-
   const categoryRules = rules.filter(r => r.category === activeCategory);
 
-  const updateRule = (id: string, value: number) => {
-    setRules(prev => prev.map(r => r.id === id ? { ...r, value } : r));
+  const handleSave = async () => {
+    try {
+      await saveAll();
+      toast.success(firebaseReady ? 'Regras salvas no Firebase!' : 'Regras salvas localmente!');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao salvar');
+    }
   };
 
-  const handleSave = () => {
-    // TODO: save to Firestore
-    toast.success('Regras de preço salvas!');
-  };
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -45,7 +53,6 @@ export default function AdminPricing() {
           </button>
         </div>
 
-        {/* Category tabs */}
         <div className="flex gap-1 flex-wrap bg-muted/50 rounded-lg p-1">
           {CATEGORIES.map(cat => (
             <button
@@ -62,7 +69,6 @@ export default function AdminPricing() {
           ))}
         </div>
 
-        {/* Rules */}
         <div className="space-y-2">
           {categoryRules.map(rule => (
             <div key={rule.id} className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
@@ -75,7 +81,7 @@ export default function AdminPricing() {
                   type="number"
                   value={Math.round(rule.value * 100)}
                   onChange={e => updateRule(rule.id, parseFloat(e.target.value) / 100)}
-                  className="w-20 h-9 rounded-lg border border-border bg-background px-3 text-sm text-foreground text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="w-20 h-9 rounded-lg border border-border bg-background px-3 text-base text-foreground text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-primary/40"
                   step={1}
                   min={0}
                   max={100}

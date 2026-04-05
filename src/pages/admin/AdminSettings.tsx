@@ -1,27 +1,20 @@
-import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
-import { MOCK_SETTINGS } from '@/data/admin-mock';
-import { AppSettings } from '@/types/admin';
+import { useAppSettings } from '@/hooks/useFirebaseData';
 import { DEFECT_QUESTIONS } from '@/data/catalog';
-import { Save, MessageCircle, Camera, FileText, Settings } from 'lucide-react';
+import { Save, MessageCircle, Camera, FileText, Settings, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState<AppSettings>(MOCK_SETTINGS);
+  const { settings, loading, update, toggleQuestion, save, firebaseReady } = useAppSettings();
 
-  const update = (key: keyof AppSettings, value: any) => {
-    setSettings(prev => ({ ...prev, [key]: value }));
-  };
-
-  const toggleQuestion = (key: string) => {
-    setSettings(prev => ({
-      ...prev,
-      questionsConfig: { ...prev.questionsConfig, [key]: !prev.questionsConfig[key] },
-    }));
-  };
-
-  const handleSave = () => {
-    toast.success('Configurações salvas!');
+  const handleSave = async () => {
+    try {
+      await save();
+      toast.success(firebaseReady ? 'Configurações salvas no Firebase!' : 'Configurações salvas localmente!');
+    } catch (e: any) {
+      toast.error(e.message || 'Erro ao salvar');
+    }
   };
 
   const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -31,8 +24,18 @@ export default function AdminSettings() {
     </div>
   );
 
-  const inputCls = "w-full h-10 rounded-lg border border-border bg-background px-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
-  const textareaCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none";
+  const inputCls = "w-full h-10 rounded-lg border border-border bg-background px-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40";
+  const textareaCls = "w-full rounded-lg border border-border bg-background px-3 py-2.5 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none";
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -86,12 +89,7 @@ export default function AdminSettings() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm text-foreground">Permitir upload de fotos</span>
-            <button
-              onClick={() => update('photosEnabled', !settings.photosEnabled)}
-              className={`w-11 h-6 rounded-full transition-colors ${settings.photosEnabled ? 'bg-primary' : 'bg-muted'} relative`}
-            >
-              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.photosEnabled ? 'translate-x-5' : 'translate-x-0.5'}`} />
-            </button>
+            <ToggleSwitch checked={settings.photosEnabled} onChange={() => update('photosEnabled', !settings.photosEnabled)} />
           </div>
           <Field label="Limite de fotos">
             <input type="number" value={settings.photosLimit} onChange={e => update('photosLimit', parseInt(e.target.value) || 1)} className={inputCls} min={1} max={20} />
@@ -106,19 +104,35 @@ export default function AdminSettings() {
           </div>
           <div className="space-y-2">
             {DEFECT_QUESTIONS.map(q => (
-              <div key={q.key} className="flex items-center justify-between py-1">
+              <div key={q.key} className="flex items-center justify-between py-1.5">
                 <span className="text-sm text-foreground">{q.label}</span>
-                <button
-                  onClick={() => toggleQuestion(q.key)}
-                  className={`w-11 h-6 rounded-full transition-colors ${settings.questionsConfig[q.key] ? 'bg-primary' : 'bg-muted'} relative`}
-                >
-                  <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform ${settings.questionsConfig[q.key] ? 'translate-x-5' : 'translate-x-0.5'}`} />
-                </button>
+                <ToggleSwitch checked={settings.questionsConfig[q.key]} onChange={() => toggleQuestion(q.key)} />
               </div>
             ))}
           </div>
         </div>
       </div>
     </AdminLayout>
+  );
+}
+
+// ─── Custom Toggle Switch Component ───
+function ToggleSwitch({ checked, onChange }: { checked: boolean; onChange: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onChange}
+      className={cn(
+        'relative inline-flex h-7 w-12 shrink-0 cursor-pointer items-center rounded-full transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50',
+        checked ? 'bg-primary' : 'bg-muted'
+      )}
+    >
+      <span
+        className={cn(
+          'pointer-events-none block h-5 w-5 rounded-full bg-white shadow-md ring-0 transition-transform duration-200',
+          checked ? 'translate-x-6' : 'translate-x-1'
+        )}
+      />
+    </button>
   );
 }

@@ -1,11 +1,14 @@
-import { TRADE_IN_MODELS } from '@/data/catalog';
-import { SimulatorData } from '@/types/simulator';
+import { SimulatorData, TradeInModel } from '@/types/simulator';
 import { cn } from '@/lib/utils';
 
-interface Props { data: SimulatorData; onUpdate: (u: Partial<SimulatorData>) => void; }
+interface Props {
+  data: SimulatorData;
+  onUpdate: (u: Partial<SimulatorData>) => void;
+  models: TradeInModel[];
+}
 
-export function StepColor({ data, onUpdate }: Props) {
-  const model = TRADE_IN_MODELS.find(m => m.id === data.currentModel);
+export function StepColor({ data, onUpdate, models }: Props) {
+  const model = models.find(m => m.id === data.currentModel);
   if (!model) return null;
 
   return (
@@ -22,12 +25,12 @@ export function StepColor({ data, onUpdate }: Props) {
             className={cn(
               'flex items-center gap-3 rounded-xl border p-4 transition-all duration-200 active:scale-[0.97]',
               data.currentColor === c.id
-                ? 'border-brand-orange/50 bg-brand-orange/10 glow-orange-sm'
-                : 'border-border bg-card hover:border-brand-orange/25'
+                ? 'border-brand-orange bg-brand-orange/15 glow-orange-sm ring-1 ring-brand-orange/30'
+                : 'border-border bg-card hover:border-muted-foreground/30'
             )}
           >
             <div className="h-7 w-7 rounded-full border border-white/10 shrink-0" style={{ backgroundColor: c.hex }} />
-            <span className="text-xs font-medium text-foreground">{c.name}</span>
+            <span className={cn("text-xs font-medium", data.currentColor === c.id ? "text-foreground" : "text-muted-foreground")}>{c.name}</span>
           </button>
         ))}
       </div>

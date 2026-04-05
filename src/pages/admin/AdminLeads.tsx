@@ -3,22 +3,25 @@ import { useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { StatusBadge } from '@/components/admin/StatusBadge';
 import { EmptyState } from '@/components/admin/EmptyState';
-import { useAdminLeads } from '@/hooks/useAdminLeads';
+import { useFirebaseLeads } from '@/hooks/useFirebaseLeads';
+import { useCatalog } from '@/hooks/useFirebaseData';
 import { LEAD_STATUS_OPTIONS, LeadStatus, STEP_LABELS_ADMIN } from '@/types/admin';
-import { TRADE_IN_MODELS, SALE_MODELS, formatCurrency } from '@/data/catalog';
-import { Search, Users, Phone, MessageCircle, ExternalLink, Copy, ChevronDown } from 'lucide-react';
+import { formatCurrency } from '@/data/catalog';
+import { Search, Users, MessageCircle, Copy, ChevronDown, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function AdminLeads() {
   const navigate = useNavigate();
   const {
-    leads, searchQuery, setSearchQuery,
+    leads, loading,
+    searchQuery, setSearchQuery,
     statusFilter, setStatusFilter,
     completionFilter, setCompletionFilter,
     conditionFilter, setConditionFilter,
     updateLeadStatus,
-  } = useAdminLeads();
+  } = useFirebaseLeads();
+  const { tradeInModels, saleModels } = useCatalog();
 
   const [quickStatusOpen, setQuickStatusOpen] = useState<string | null>(null);
 
@@ -36,6 +39,16 @@ export default function AdminLeads() {
     const d = new Date(iso);
     return d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   };
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -55,7 +68,7 @@ export default function AdminLeads() {
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Buscar por nome ou telefone..."
-              className="w-full h-9 rounded-lg border border-border bg-card pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+              className="w-full h-9 rounded-lg border border-border bg-card pl-9 pr-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
             />
           </div>
           <select
@@ -98,8 +111,8 @@ export default function AdminLeads() {
         ) : (
           <div className="space-y-2">
             {leads.map(lead => {
-              const tradeModel = TRADE_IN_MODELS.find(m => m.id === lead.currentModel);
-              const saleModel = SALE_MODELS.find(m => m.id === lead.desiredModel);
+              const tradeModel = tradeInModels.find(m => m.id === lead.currentModel);
+              const saleModel = saleModels.find(m => m.id === lead.desiredModel);
               const isPartial = !lead.completed;
 
               return (
@@ -107,16 +120,13 @@ export default function AdminLeads() {
                   key={lead.sessionId}
                   className="rounded-xl border border-border bg-card p-4 hover:border-primary/20 transition-colors"
                 >
-                  {/* Top row */}
                   <div className="flex items-start gap-3">
                     <div
                       className="flex-1 min-w-0 cursor-pointer"
                       onClick={() => navigate(`/admin/leads/${lead.sessionId}`)}
                     >
                       <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-foreground">
-                          {lead.name || 'Lead anônimo'}
-                        </p>
+                        <p className="text-sm font-semibold text-foreground">{lead.name || 'Lead anônimo'}</p>
                         <StatusBadge status={lead.status} />
                         {isPartial && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-400 font-medium">
@@ -127,41 +137,29 @@ export default function AdminLeads() {
                       <p className="text-xs text-muted-foreground mt-1">
                         {tradeModel?.name || '—'} → {saleModel?.name || '—'}
                         {lead.desiredCondition && (
-                          <span className="ml-1">
-                            ({lead.desiredCondition === 'sealed' ? 'Lacrado' : 'Usado'})
-                          </span>
+                          <span className="ml-1">({lead.desiredCondition === 'sealed' ? 'Lacrado' : 'Usado'})</span>
                         )}
                       </p>
                       <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
                         <span>{formatDate(lead.startedAt)}</span>
-                        {lead.utm.utm_source && <span className="text-accent">{lead.utm.utm_source}</span>}
+                        {lead.utm?.utm_source && <span className="text-accent">{lead.utm.utm_source}</span>}
                         {lead.quote && (
                           <span className="text-primary font-semibold">{formatCurrency(lead.quote.difference)}</span>
                         )}
                       </div>
                     </div>
 
-                    {/* Quick actions */}
                     <div className="flex items-center gap-1 shrink-0">
                       {lead.phone && (
                         <>
-                          <button
-                            onClick={() => copyPhone(lead.phone)}
-                            className="p-1.5 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors"
-                            title="Copiar telefone"
-                          >
+                          <button onClick={() => copyPhone(lead.phone)} className="p-1.5 rounded-md text-muted-foreground hover:bg-muted/50 hover:text-foreground transition-colors" title="Copiar telefone">
                             <Copy className="h-3.5 w-3.5" />
                           </button>
-                          <button
-                            onClick={() => openWhatsApp(lead.phone, lead.name)}
-                            className="p-1.5 rounded-md text-emerald-400 hover:bg-emerald-500/10 transition-colors"
-                            title="WhatsApp"
-                          >
+                          <button onClick={() => openWhatsApp(lead.phone, lead.name)} className="p-1.5 rounded-md text-emerald-400 hover:bg-emerald-500/10 transition-colors" title="WhatsApp">
                             <MessageCircle className="h-3.5 w-3.5" />
                           </button>
                         </>
                       )}
-                      {/* Quick status change */}
                       <div className="relative">
                         <button
                           onClick={() => setQuickStatusOpen(quickStatusOpen === lead.sessionId ? null : lead.sessionId)}
@@ -175,8 +173,8 @@ export default function AdminLeads() {
                             {LEAD_STATUS_OPTIONS.map(opt => (
                               <button
                                 key={opt.value}
-                                onClick={() => {
-                                  updateLeadStatus(lead.sessionId, opt.value);
+                                onClick={async () => {
+                                  await updateLeadStatus(lead.sessionId, opt.value);
                                   setQuickStatusOpen(null);
                                   toast.success(`Status alterado para ${opt.label}`);
                                 }}
