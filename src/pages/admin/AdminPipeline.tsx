@@ -1,18 +1,44 @@
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { StatusBadge } from '@/components/admin/StatusBadge';
-import { MOCK_LEADS, MOCK_FUNNEL_DATA } from '@/data/admin-mock';
-import { LEAD_STATUS_OPTIONS, LeadStatus } from '@/types/admin';
-import { TRADE_IN_MODELS, SALE_MODELS, formatCurrency } from '@/data/catalog';
+import { useFirebaseLeads } from '@/hooks/useFirebaseLeads';
+import { useCatalog } from '@/hooks/useFirebaseData';
+import { LEAD_STATUS_OPTIONS } from '@/types/admin';
+import { formatCurrency } from '@/data/catalog';
 import { useNavigate } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { cn } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
+import { useMemo } from 'react';
+import { STEP_LABELS } from '@/types/simulator';
 
 export default function AdminPipeline() {
   const navigate = useNavigate();
-  const grouped = LEAD_STATUS_OPTIONS.map(opt => ({
+  const { allLeads, loading } = useFirebaseLeads();
+  const { tradeInModels } = useCatalog();
+
+  const grouped = useMemo(() => LEAD_STATUS_OPTIONS.map(opt => ({
     ...opt,
-    leads: MOCK_LEADS.filter(l => l.status === opt.value),
-  }));
+    leads: allLeads.filter(l => l.status === opt.value),
+  })), [allLeads]);
+
+  // Build funnel data from real leads
+  const funnelData = useMemo(() => {
+    const total = allLeads.length || 1;
+    return STEP_LABELS.map((step, i) => {
+      const count = allLeads.filter(l => l.lastCompletedStep >= i).length;
+      return { step, count, rate: Math.round((count / total) * 100) };
+    });
+  }, [allLeads]);
+
+  if (loading) {
+    return (
+      <AdminLayout>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        </div>
+      </AdminLayout>
+    );
+  }
 
   return (
     <AdminLayout>
@@ -27,7 +53,7 @@ export default function AdminPipeline() {
           <h3 className="text-sm font-semibold text-foreground mb-4">Funil por etapa do simulador</h3>
           <div className="h-56">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={MOCK_FUNNEL_DATA}>
+              <BarChart data={funnelData}>
                 <XAxis dataKey="step" tick={{ fill: '#9E9DA1', fontSize: 10 }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" height={50} />
                 <YAxis tick={{ fill: '#9E9DA1', fontSize: 11 }} axisLine={false} tickLine={false} width={36} />
                 <Tooltip
@@ -36,21 +62,12 @@ export default function AdminPipeline() {
                   formatter={(val: number, _: string, entry: any) => [`${val} sessões (${entry.payload.rate}%)`, '']}
                 />
                 <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                  {MOCK_FUNNEL_DATA.map((entry, i) => (
+                  {funnelData.map((_, i) => (
                     <Cell key={i} fill={i < 5 ? '#DF8E35' : '#58A0E5'} fillOpacity={1 - i * 0.06} />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
-          {/* Funnel stats */}
-          <div className="grid grid-cols-5 gap-2 mt-4">
-            {MOCK_FUNNEL_DATA.filter((_, i) => i % 2 === 0).map(item => (
-              <div key={item.step} className="text-center">
-                <p className="text-lg font-bold text-foreground tabular-nums">{item.rate}%</p>
-                <p className="text-[10px] text-muted-foreground">{item.step}</p>
-              </div>
-            ))}
           </div>
         </div>
 
@@ -72,7 +89,7 @@ export default function AdminPipeline() {
                     <p className="text-[10px] text-muted-foreground text-center py-4">Nenhum lead</p>
                   ) : (
                     group.leads.map(lead => {
-                      const tradeModel = TRADE_IN_MODELS.find(m => m.id === lead.currentModel);
+                      const tradeModel = tradeInModels.find(m => m.id === lead.currentModel);
                       return (
                         <button
                           key={lead.sessionId}

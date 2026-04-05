@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { StatusBadge } from '@/components/admin/StatusBadge';
-import { useAdminLeads } from '@/hooks/useAdminLeads';
-import { LEAD_STATUS_OPTIONS, LeadStatus, STEP_LABELS_ADMIN } from '@/types/admin';
-import { TRADE_IN_MODELS, SALE_MODELS, CONDITIONS, PAYMENT_METHODS, DEFECT_QUESTIONS, formatCurrency, formatStorage } from '@/data/catalog';
+import { useFirebaseLeads } from '@/hooks/useFirebaseLeads';
+import { useCatalog } from '@/hooks/useFirebaseData';
+import { LEAD_STATUS_OPTIONS, STEP_LABELS_ADMIN } from '@/types/admin';
+import { CONDITIONS, PAYMENT_METHODS, DEFECT_QUESTIONS, formatCurrency, formatStorage } from '@/data/catalog';
 import {
-  ArrowLeft, Phone, MessageCircle, Copy, Clock, MapPin, Smartphone, Battery, Shield, Camera,
-  Package, FileText, CheckCircle2, XCircle, AlertTriangle, Send, ChevronDown, User, Image,
+  ArrowLeft, Phone, MessageCircle, Copy, Clock, MapPin, Smartphone, Battery, Shield,
+  CheckCircle2, XCircle, Send, ChevronDown, User, Image,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -15,7 +16,8 @@ import { toast } from 'sonner';
 export default function AdminLeadDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getLead, updateLeadStatus, addNote } = useAdminLeads();
+  const { getLead, updateLeadStatus, addNote } = useFirebaseLeads();
+  const { tradeInModels, saleModels } = useCatalog();
   const lead = getLead(id || '');
   const [noteText, setNoteText] = useState('');
   const [statusOpen, setStatusOpen] = useState(false);
@@ -31,15 +33,15 @@ export default function AdminLeadDetail() {
     );
   }
 
-  const tradeModel = TRADE_IN_MODELS.find(m => m.id === lead.currentModel);
-  const saleModel = SALE_MODELS.find(m => m.id === lead.desiredModel);
+  const tradeModel = tradeInModels.find(m => m.id === lead.currentModel);
+  const saleModel = saleModels.find(m => m.id === lead.desiredModel);
   const condition = CONDITIONS.find(c => c.id === lead.condition);
   const payment = PAYMENT_METHODS.find(p => p.id === lead.paymentMethod);
   const formatDate = (iso: string) => new Date(iso).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!noteText.trim()) return;
-    addNote(lead.sessionId, noteText.trim());
+    await addNote(lead.sessionId, noteText.trim());
     setNoteText('');
     toast.success('Observação adicionada');
   };
@@ -115,7 +117,7 @@ export default function AdminLeadDetail() {
                   {LEAD_STATUS_OPTIONS.map(opt => (
                     <button
                       key={opt.value}
-                      onClick={() => { updateLeadStatus(lead.sessionId, opt.value); setStatusOpen(false); toast.success(`Status: ${opt.label}`); }}
+                      onClick={async () => { await updateLeadStatus(lead.sessionId, opt.value); setStatusOpen(false); toast.success(`Status: ${opt.label}`); }}
                       className={cn('w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-muted/50', lead.status === opt.value ? 'text-primary' : 'text-foreground')}
                     >
                       <span className={cn('h-2 w-2 rounded-full', opt.color)} /> {opt.label}
@@ -130,19 +132,17 @@ export default function AdminLeadDetail() {
         <div className="grid md:grid-cols-2 gap-4">
           {/* Left column */}
           <div className="space-y-4">
-            {/* Contact */}
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Dados pessoais</h3>
               <InfoRow label="Nome" value={lead.name || '—'} icon={User} />
               <InfoRow label="Telefone" value={lead.phone || '—'} icon={Phone} />
-              <InfoRow label="Origem" value={lead.utm.utm_source || 'Direto'} icon={MapPin} />
-              <InfoRow label="Campanha" value={lead.utm.utm_campaign || '—'} />
+              <InfoRow label="Origem" value={lead.utm?.utm_source || 'Direto'} icon={MapPin} />
+              <InfoRow label="Campanha" value={lead.utm?.utm_campaign || '—'} />
               <InfoRow label="Início" value={formatDate(lead.startedAt)} icon={Clock} />
               <InfoRow label="Última interação" value={formatDate(lead.lastInteraction)} />
               <InfoRow label="Etapa final" value={`${lead.lastCompletedStep + 1}/10 — ${STEP_LABELS_ADMIN[lead.lastCompletedStep] || '—'}`} />
             </div>
 
-            {/* Current device */}
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Aparelho atual</h3>
               <InfoRow label="Modelo" value={tradeModel?.name || '—'} icon={Smartphone} />
@@ -152,7 +152,6 @@ export default function AdminLeadDetail() {
               <InfoRow label="Estado geral" value={condition?.label || '—'} icon={Shield} />
             </div>
 
-            {/* Defects */}
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Condição detalhada</h3>
               {DEFECT_QUESTIONS.map(q => (
@@ -163,7 +162,6 @@ export default function AdminLeadDetail() {
 
           {/* Right column */}
           <div className="space-y-4">
-            {/* Desired */}
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Aparelho desejado</h3>
               <InfoRow label="Modelo" value={saleModel?.name || '—'} icon={Smartphone} />
@@ -172,7 +170,6 @@ export default function AdminLeadDetail() {
               <InfoRow label="Pagamento" value={payment?.label || '—'} />
             </div>
 
-            {/* Quote (internal) */}
             {lead.quote && (
               <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
                 <h3 className="text-xs font-semibold text-primary uppercase tracking-wider mb-3">Cotação (interno)</h3>
@@ -193,8 +190,7 @@ export default function AdminLeadDetail() {
               </div>
             )}
 
-            {/* Photos */}
-            {lead.photos.length > 0 && (
+            {lead.photos && lead.photos.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-4">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 flex items-center gap-1"><Image className="h-3 w-3" /> Fotos ({lead.photos.length})</h3>
                 <div className="grid grid-cols-3 gap-2">
@@ -207,12 +203,11 @@ export default function AdminLeadDetail() {
               </div>
             )}
 
-            {/* Notes */}
             <div className="rounded-xl border border-border bg-card p-4">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Observações</h3>
-              {lead.notes.length === 0 && <p className="text-xs text-muted-foreground">Nenhuma observação ainda.</p>}
+              {(!lead.notes || lead.notes.length === 0) && <p className="text-xs text-muted-foreground">Nenhuma observação ainda.</p>}
               <div className="space-y-2 mb-3">
-                {lead.notes.map(note => (
+                {lead.notes?.map(note => (
                   <div key={note.id} className="rounded-lg bg-muted/50 p-2.5">
                     <p className="text-xs text-foreground">{note.text}</p>
                     <p className="text-[10px] text-muted-foreground mt-1">{note.author} · {formatDate(note.createdAt)}</p>
@@ -224,7 +219,7 @@ export default function AdminLeadDetail() {
                   value={noteText}
                   onChange={e => setNoteText(e.target.value)}
                   placeholder="Adicionar observação..."
-                  className="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
+                  className="flex-1 h-9 rounded-lg border border-border bg-background px-3 text-base text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                   onKeyDown={e => e.key === 'Enter' && handleAddNote()}
                 />
                 <button
@@ -236,8 +231,7 @@ export default function AdminLeadDetail() {
               </div>
             </div>
 
-            {/* Status History */}
-            {lead.statusHistory.length > 0 && (
+            {lead.statusHistory && lead.statusHistory.length > 0 && (
               <div className="rounded-xl border border-border bg-card p-4">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3">Histórico</h3>
                 <div className="space-y-2">

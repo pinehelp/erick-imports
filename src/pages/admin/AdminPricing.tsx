@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { AdminLayout } from '@/components/admin/AdminLayout';
 import { usePricingRules } from '@/hooks/useFirebaseData';
 import { Battery, Shield, AlertTriangle, Package, CreditCard, Save, Loader2 } from 'lucide-react';
@@ -14,7 +15,7 @@ const CATEGORIES = [
 
 export default function AdminPricing() {
   const { rules, loading, updateRule, saveAll, firebaseReady } = usePricingRules();
-  const [activeCategory, setActiveCategory] = __import_useState('battery');
+  const [activeCategory, setActiveCategory] = useState<string>('battery');
   const categoryRules = rules.filter(r => r.category === activeCategory);
 
   const handleSave = async () => {
@@ -52,7 +53,6 @@ export default function AdminPricing() {
           </button>
         </div>
 
-        {/* Category tabs */}
         <div className="flex gap-1 flex-wrap bg-muted/50 rounded-lg p-1">
           {CATEGORIES.map(cat => (
             <button
@@ -69,7 +69,6 @@ export default function AdminPricing() {
           ))}
         </div>
 
-        {/* Rules */}
         <div className="space-y-2">
           {categoryRules.map(rule => (
             <div key={rule.id} className="rounded-xl border border-border bg-card p-4 flex items-center gap-4">
@@ -96,6 +95,3 @@ export default function AdminPricing() {
     </AdminLayout>
   );
 }
-
-// Inline useState import to avoid the issue with the file
-import { useState as __import_useState } from 'react';
